@@ -8,8 +8,10 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { DashboardWidget, StatItem, QuickActionButton } from '@/components/dashboard/DashboardWidgets';
 import { SimpleBarChart, SimpleLineChart } from '@/components/charts/SimpleCharts';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/components/auth/AuthContext';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 const performanceData = [
   { name: 'Mon', performance: 75, attendance: 92, trend: 72 },
@@ -42,8 +44,8 @@ const atRiskStudents = [
 ];
 
 export default function TeacherDashboard() {
-  const { user } = useAuth();
-
+  // Auth context is accessed via layout/header components
+  
   const widgets = [
     {
       title: 'Total Students',
@@ -95,7 +97,7 @@ export default function TeacherDashboard() {
               className="mb-8"
             >
               <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-                Welcome back, {user?.name || 'Teacher'}!
+                Welcome back, Teacher!
               </h1>
               <p className="text-muted-foreground">
                 Here's what's happening with your class today

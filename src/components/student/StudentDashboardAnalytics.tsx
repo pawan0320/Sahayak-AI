@@ -221,7 +221,7 @@ export function StudentDashboardAnalytics({
                 dataKey="value"
                 isAnimationActive
               >
-                {data.map((entry, index) => (
+                {attendanceData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </Pie>

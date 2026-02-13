@@ -8,6 +8,8 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+export const dynamic = 'force-dynamic';
+
 const attendanceData = [
   { name: 'Week 1', attendance: 92 },
   { name: 'Week 2', attendance: 94 },

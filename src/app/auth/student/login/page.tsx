@@ -1,199 +1,212 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Bot, Eye, EyeOff, Hash, Lock, Camera } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import { AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { CameraUI } from '@/components/auth/CameraUI';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function StudentLogin() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'password' | 'face'>('password');
-  const [isFaceDetected, setIsFaceDetected] = useState(false);
-  
-  const { login, loginWithFace, isLoading, error } = useAuth();
   const router = useRouter();
+  const { studentLogin } = useAuth();
 
-  const [passwordForm, setPasswordForm] = useState({
-    rollNumber: '',
-    password: '',
+  const [formData, setFormData] = useState({
+    rollNo: '',
+    schoolCode: '',
+    pin: '',
   });
 
-  // Password Login
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // For students, we can use roll number as email
-      await login(passwordForm.rollNumber, passwordForm.password, 'student');
-      router.push('/student/dashboard');
-    } catch (err) {
-      console.error('Login error:', err);
-    }
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'pin' ? value.replace(/\D/g, '').slice(0, 4) : value,
+    }));
   };
 
-  // Face Login
-  const handleFaceCapture = async (imageData: string) => {
+  const validateForm = (): boolean => {
+    setError('');
+
+    if (!formData.rollNo.trim()) {
+      setError('Roll number is required');
+      return false;
+    }
+
+    if (!formData.schoolCode.trim()) {
+      setError('School code is required');
+      return false;
+    }
+
+    if (!formData.pin || formData.pin.length !== 4) {
+      setError('PIN must be 4 digits');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsLoading(true);
     try {
-      await loginWithFace(imageData, 'student');
-      router.push('/student/dashboard');
-    } catch (err) {
-      console.error('Face login error:', err);
+      setError('');
+
+      await studentLogin(formData.rollNo, formData.schoolCode, formData.pin);
+
+      setSuccess('Login successful! ✓');
+      setTimeout(() => router.push('/student/dashboard'), 1500);
+    } catch (error: any) {
+      setError(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/50 to-background flex items-center justify-center p-4">
+    <div className='min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-900 flex items-center justify-center p-4'>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-2xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className='w-full max-w-md'
       >
-        <Card className="p-8 border-border/50 shadow-lg shadow-primary/10">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="flex items-center justify-center gap-3 mb-8"
-          >
-            <div className="bg-gradient-to-br from-primary to-accent p-3 rounded-lg">
-              <Bot className="w-8 h-8 text-foreground" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Sahayak
+        <Card className='border-blue-500/20 bg-blue-900/80 backdrop-blur-xl shadow-2xl'>
+          <div className='p-8'>
+            {/* Header */}
+            <div className='text-center mb-8'>
+              <h1 className='text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent'>
+                Student Login
               </h1>
-              <p className="text-xs text-muted-foreground">Student Portal</p>
+              <p className='text-blue-300 mt-2'>Welcome to SAHAYAK</p>
             </div>
-          </motion.div>
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-8 text-center"
-          >
-            <h2 className="text-2xl font-bold mb-2">Student Login</h2>
-            <p className="text-sm text-muted-foreground">Choose your login method</p>
-          </motion.div>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className='mb-4'
+              >
+                <Alert className='border-red-500/50 bg-red-500/10'>
+                  <AlertCircle className='w-4 h-4 text-red-500' />
+                  <AlertDescription className='text-red-400'>{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm"
-            >
-              {error}
-            </motion.div>
-          )}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className='mb-4'
+              >
+                <Alert className='border-green-500/50 bg-green-500/10'>
+                  <CheckCircle className='w-4 h-4 text-green-500' />
+                  <AlertDescription className='text-green-400'>{success}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as any)} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">Password</TabsTrigger>
-                <TabsTrigger value="face">Face ID</TabsTrigger>
-              </TabsList>
-
-              {/* Password Login */}
-              <TabsContent value="password" className="space-y-4 mt-6">
-                <form onSubmit={handlePasswordLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Roll Number</label>
-                    <div className="relative">
-                      <Hash className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={passwordForm.rollNumber}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, rollNumber: e.target.value })}
-                        placeholder="Enter your roll number"
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={passwordForm.password}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                        placeholder="Enter your password"
-                        className="w-full pl-10 pr-10 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                  >
-                    {isLoading ? 'Logging in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* Face Login */}
-              <TabsContent value="face" className="space-y-4 mt-6">
-                <div className="text-center mb-6">
-                  <Camera className="w-12 h-12 text-primary mx-auto mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Position your face for auto-login and attendance marking
-                  </p>
-                </div>
-
-                <CameraUI
-                  onCapture={handleFaceCapture}
-                  onFaceDetected={setIsFaceDetected}
-                  isLoading={isLoading}
+            <form onSubmit={handleLogin} className='space-y-4'>
+              {/* Roll Number */}
+              <div>
+                <label className='text-sm text-blue-300 mb-2 block'>Roll Number</label>
+                <Input
+                  type='text'
+                  name='rollNo'
+                  placeholder='Enter your roll number'
+                  value={formData.rollNo}
+                  onChange={handleChange}
+                  className='bg-blue-800 border-blue-700 text-white placeholder-blue-400'
                 />
-              </TabsContent>
-            </Tabs>
-          </motion.div>
+              </div>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">OR</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
+              {/* School Code */}
+              <div>
+                <label className='text-sm text-blue-300 mb-2 block'>School Code</label>
+                <Input
+                  type='text'
+                  name='schoolCode'
+                  placeholder='Enter school code'
+                  value={formData.schoolCode}
+                  onChange={handleChange}
+                  className='bg-blue-800 border-blue-700 text-white placeholder-blue-400'
+                />
+              </div>
 
-          {/* Signup Link */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="text-center"
-          >
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Link href="/auth/student/signup" className="text-primary hover:underline font-medium">
+              {/* PIN Entry */}
+              <div>
+                <label className='text-sm text-blue-300 mb-2 block'>Login PIN</label>
+                <div className='flex gap-2'>
+                  {[0, 1, 2, 3].map((i) => (
+                    <input
+                      key={i}
+                      type='password'
+                      maxLength={1}
+                      value={formData.pin[i] || ''}
+                      onChange={(e) => {
+                        const newPin = formData.pin.split('');
+                        newPin[i] = e.target.value.replace(/\D/g, '');
+                        setFormData({ ...formData, pin: newPin.join('') });
+                        
+                        // Auto-focus next field
+                        if (newPin[i] && i < 3) {
+                          const nextInput = (e.target.parentElement?.children[i + 1] as HTMLInputElement);
+                          nextInput?.focus();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace' && !formData.pin[i] && i > 0) {
+                          const prevInput = ((e.target as HTMLInputElement).parentElement?.children[i - 1] as HTMLInputElement);
+                          prevInput?.focus();
+                        }
+                      }}
+                      className='flex-1 w-12 h-12 text-center bg-blue-800 border border-blue-700 text-white text-xl font-bold rounded-lg focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/50'
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit */}
+              <Button
+                type='submit'
+                disabled={isLoading}
+                className='w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white mt-6'
+              >
+                {isLoading && <Loader2 className='w-4 h-4 mr-2 animate-spin' />}
+                {isLoading ? 'Logging in...' : 'Login'}
+              </Button>
+            </form>
+
+            {/* Info Box */}
+            <div className='mt-6 p-4 bg-blue-800/50 border border-blue-700/50 rounded-lg'>
+              <p className='text-xs text-blue-300'>
+                💡 <strong>Demo Credentials:</strong><br/>
+                Roll No: 001<br/>
+                School Code: SCHOOL001<br/>
+                PIN: 1234
+              </p>
+            </div>
+
+            {/* Signup Link */}
+            <div className='mt-6 text-center text-blue-300 text-sm'>
+              New student?{' '}
+              <Link href='/auth/student/signup' className='text-cyan-400 hover:text-cyan-300 font-medium'>
                 Register here
               </Link>
-            </p>
-          </motion.div>
+            </div>
+          </div>
         </Card>
       </motion.div>
     </div>

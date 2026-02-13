@@ -1,188 +1,182 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Lock,  Shield, Camera, Eye, EyeOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { CameraUI } from '@/components/auth/CameraUI';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import { AlertCircle, Loader2, CheckCircle, Eye, EyeOff, Shield } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminLogin() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'password' | 'face'>('password');
-  const [isFaceDetected, setIsFaceDetected] = useState(false);
-  
-  const { login, loginWithFace, isLoading, error } = useAuth();
   const router = useRouter();
+  const { adminLogin } = useAuth();
 
-  const [emailForm, setEmailForm] = useState({
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
-  // Email/Password Login
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await login(emailForm.email, emailForm.password, 'admin');
-      router.push('/admin/dashboard');
-    } catch (err) {
-      console.error('Login error:', err);
-    }
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  // Face Login
-  const handleFaceCapture = async (imageData: string) => {
+  const validateForm = (): boolean => {
+    setError('');
+
+    if (!formData.email.includes('@')) {
+      setError('Valid email is required');
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Valid password is required');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsLoading(true);
     try {
-      await loginWithFace(imageData, 'admin');
-      router.push('/admin/dashboard');
-    } catch (err) {
-      console.error('Face login error:', err);
+      setError('');
+
+      await adminLogin(formData.email, formData.password);
+
+      setSuccess('Login successful! ✓');
+      setTimeout(() => router.push('/admin/dashboard'), 1500);
+    } catch (error: any) {
+      setError(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/50 to-background flex items-center justify-center p-4">
+    <div className='min-h-screen bg-gradient-to-br from-red-950 via-orange-950 to-red-950 flex items-center justify-center p-4'>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-2xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className='w-full max-w-md'
       >
-        <Card className="p-8 border-border/50 shadow-lg shadow-primary/10">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="flex items-center justify-center gap-3 mb-8"
-          >
-            <div className="bg-gradient-to-br from-primary to-accent p-3 rounded-lg relative">
-              <Shield className="w-8 h-8 text-foreground" />
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-background" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Sahayak
+        <Card className='border-red-500/20 bg-red-950/80 backdrop-blur-xl shadow-2xl'>
+          <div className='p-8'>
+            {/* Header */}
+            <div className='text-center mb-8'>
+              <div className='inline-block mb-4 p-3 bg-gradient-to-br from-orange-400 to-red-400 rounded-lg'>
+                <Shield className='w-8 h-8 text-white' />
+              </div>
+              <h1 className='text-3xl font-bold bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent'>
+                Admin Portal
               </h1>
-              <p className="text-xs text-muted-foreground">Admin Portal</p>
+              <p className='text-red-300 mt-2'>Secure Access Required</p>
             </div>
-          </motion.div>
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-8 text-center"
-          >
-            <h2 className="text-2xl font-bold mb-2">Admin Access</h2>
-            <p className="text-sm text-muted-foreground">Secure login with biometric verification</p>
-          </motion.div>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className='mb-4'
+              >
+                <Alert className='border-red-500/50 bg-red-500/10'>
+                  <AlertCircle className='w-4 h-4 text-red-500' />
+                  <AlertDescription className='text-red-400'>{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm"
-            >
-              {error}
-            </motion.div>
-          )}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className='mb-4'
+              >
+                <Alert className='border-green-500/50 bg-green-500/10'>
+                  <CheckCircle className='w-4 h-4 text-green-500' />
+                  <AlertDescription className='text-green-400'>{success}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <Tabs value={loginMethod} onValueChange={(value) => setLoginMethod(value as any)} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">Email & Password</TabsTrigger>
-                <TabsTrigger value="face">Face Verification</TabsTrigger>
-              </TabsList>
-
-              {/* Email/Password Login */}
-              <TabsContent value="password" className="space-y-4 mt-6">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Admin Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type="email"
-                        value={emailForm.email}
-                        onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
-                        placeholder="admin@sahayak.com"
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={emailForm.password}
-                        onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                        placeholder="Enter your password"
-                        className="w-full pl-10 pr-10 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                  >
-                    {isLoading ? 'Authenticating...' : 'Access Admin Panel'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* Face Verification Login */}
-              <TabsContent value="face" className="space-y-4 mt-6">
-                <div className="text-center mb-6">
-                  <Camera className="w-12 h-12 text-primary mx-auto mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Register and verify your face for secure admin access
-                  </p>
-                </div>
-
-                <CameraUI
-                  onCapture={handleFaceCapture}
-                  onFaceDetected={setIsFaceDetected}
-                  isLoading={isLoading}
+            <form onSubmit={handleLogin} className='space-y-4'>
+              {/* Email */}
+              <div>
+                <label className='text-sm text-red-300 mb-2 block'>Admin Email</label>
+                <Input
+                  type='email'
+                  name='email'
+                  placeholder='admin@sahayak.com'
+                  value={formData.email}
+                  onChange={handleChange}
+                  className='bg-red-900 border-red-700 text-white placeholder-red-400'
                 />
-              </TabsContent>
-            </Tabs>
-          </motion.div>
+              </div>
 
-          {/* Security Notice */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20 text-sm"
-          >
-            <p className="text-muted-foreground">
-              ✓ Two-factor authentication enabled for all admin accounts
-            </p>
-          </motion.div>
+              {/* Password */}
+              <div>
+                <label className='text-sm text-red-300 mb-2 block'>Password</label>
+                <div className='relative'>
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    name='password'
+                    placeholder='Enter your password'
+                    value={formData.password}
+                    onChange={handleChange}
+                    className='bg-red-900 border-red-700 text-white placeholder-red-400 pr-10'
+                  />
+                  <button
+                    type='button'
+                    onClick={() => setShowPassword(!showPassword)}
+                    className='absolute right-3 top-1/2 -translate-y-1/2 text-red-400'
+                  >
+                    {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <Button
+                type='submit'
+                disabled={isLoading}
+                className='w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white mt-6'
+              >
+                {isLoading && <Loader2 className='w-4 h-4 mr-2 animate-spin' />}
+                {isLoading ? 'Authenticating...' : 'Access Admin Panel'}
+              </Button>
+            </form>
+
+            {/* Security Info */}
+            <div className='mt-6 p-4 bg-red-900/50 border border-red-700/50 rounded-lg'>
+              <p className='text-xs text-red-300'>
+                🔐 <strong>Demo Credentials:</strong><br/>
+                Email: admin@sahayak.com<br/>
+                Password: admin123
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className='mt-6 text-center text-red-300 text-sm'>
+              Not authorized? Contact system administrator
+            </div>
+          </div>
         </Card>
       </motion.div>
     </div>
